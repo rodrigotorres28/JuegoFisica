@@ -1,0 +1,3 @@
+viento
+X segundos de invulnerabilidad para descartar pelotas (cooldown) (sin cooldown pero no suma puntos?)
+X segundos de gravedad invertida (cooldown)
