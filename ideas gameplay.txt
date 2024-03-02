@@ -1,3 +1,7 @@
 viento
-X segundos de invulnerabilidad para descartar pelotas (cooldown) (sin cooldown pero no suma puntos?)
-X segundos de gravedad invertida (cooldown)
+X segundos de invulnerabilidad para descartar pelotas (cooldown) (sin cooldown pero no suma puntos?) [S / abajo]
+X segundos de gravedad invertida (cooldown) [espacio]
+shuffle de pelotas hacia arriba (cooldown) [W / arriba]
+recuperar pelota al caer (cooldown grande) [F]
+restart del juego [R]
+sistema de "bateria" en vez de cooldown (cargas por rebote)
