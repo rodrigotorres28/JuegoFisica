@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 import random
 
 # pygame setup
@@ -24,6 +25,7 @@ class Projectile:
     accel = accel_init
     vel = vel_init
     pos = pos_init
+    mass = 1
     time = 0
 
     accel_last_tick = accel_init
@@ -54,7 +56,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    if lastProjectile >= 15:
+    if lastProjectile >= 5:
         newProjectile()
         lastProjectile = 0
 
@@ -112,9 +114,23 @@ while running:
         #TEMPORAL Eliminar proyectiles pos >= height
         if proj.pos.y >= height_meters:
             proj_list.remove(proj)
+            break
 
+         #if Colison de proyectiles
+        
+        for proj_col in proj_list:
+            if  proj_col != proj and np.sqrt((proj_col.pos.x - proj.pos.x) ** 2 + (proj_col.pos.y - proj.pos.y) ** 2) <= 24 / pixels_per_meter:
+                vel_f = ((proj.mass * proj.vel) + (proj_col.mass * proj_col.vel)) / (proj.mass + proj_col.mass)
+                pos_new_proj = pygame.Vector2((proj.pos.x + proj_col.pos.x) / 2, (proj.pos.y + proj_col.pos.y) / 2)
+                proj.vel_init = vel_f
+                proj.pos_init = pos_new_proj
+                proj.time = 0
+                proj.mass = proj.mass + proj_col.mass
+                proj_list.remove(proj_col)
+                break
+        
         #Dibujar texto alineado dentro de cada proyectil
-        proj_text = font_proj.render("1", True, (0, 0, 0))
+        proj_text = font_proj.render(str(proj.mass), True, (0, 0, 0))
         proj_text_rect = proj_text.get_rect()
         proj_text_rect.center = (proj.pos.x * pixels_per_meter, (proj.pos.y) * pixels_per_meter)
         screen.blit(proj_text, proj_text_rect.topleft)
