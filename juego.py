@@ -35,8 +35,8 @@ class Projectile:
 
     accel_last_tick = accel_init
 
-proj_delay = 5
-lastProjectile = 999
+proj_delay = 10
+lastProjectile = 9.8
 
 def newProjectile():
     proj = Projectile()
@@ -54,9 +54,10 @@ player_time = 0
 player_accel_last_tick = 0
 
 def restart():
-    global proj_list, lastProjectile, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, gameover
+    global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, gameover
     proj_list = []
-    lastProjectile = 4
+    lastProjectile = 9.8
+    proj_delay = 10
 
     player_vel_init = 0
     player_pos_init = pygame.Vector2((530/2) / pixels_per_meter, height_meters - 7)
@@ -284,8 +285,10 @@ while running:
     player_time += dt
     lastProjectile += dt
     penalty -= dt
-    if proj_delay >= 1:
-        proj_delay -= dt * 0.02
+    if proj_delay >= 6:
+        proj_delay -= dt * 0.05
+    elif proj_delay >= 1:
+        proj_delay -= dt * 0.01
     print("delay: " + str(proj_delay))
 
 pygame.quit()
