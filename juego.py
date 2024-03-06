@@ -15,13 +15,18 @@ clock = pygame.time.Clock()
 running = True
 dt = 0
 
+gameover = False
+score = 0
+discarding = False
+penalty = 0
+
 gamespeed = 1
 proj_list = []
 
 class Projectile:
     accel_init = pygame.Vector2(0, 9.8)
     vel_init = pygame.Vector2(0, 0)
-    pos_init = pygame.Vector2(width_meters / 2, height_meters / 2)
+    pos_init = pygame.Vector2((530 / 2) / pixels_per_meter, height_meters / 2)
     accel = accel_init
     vel = vel_init
     pos = pos_init
@@ -30,12 +35,14 @@ class Projectile:
 
     accel_last_tick = accel_init
 
+proj_delay = 5
+lastProjectile = 999
+
 def newProjectile():
     proj = Projectile()
-    proj.vel_init = pygame.Vector2(random.uniform(-13, 13), random.uniform(-32, -13))
+    proj.pos_init = pygame.Vector2((530 / 2) / pixels_per_meter + random.uniform(-20, 20), height_meters / 2 + random.uniform(-20, 0))
+    proj.vel_init = pygame.Vector2(random.uniform(-16, 16), random.uniform(-32, -13))
     proj_list.append(proj)
-
-lastProjectile = 999
 
 player_vel_init = 0
 player_pos_init = pygame.Vector2((530/2) / pixels_per_meter, height_meters - 7)
@@ -46,7 +53,24 @@ player_time = 0
 
 player_accel_last_tick = 0
 
-font_score = pygame.font.SysFont("Book Antiqua", 30)
+def restart():
+    global proj_list, lastProjectile, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, gameover
+    proj_list = []
+    lastProjectile = 4
+
+    player_vel_init = 0
+    player_pos_init = pygame.Vector2((530/2) / pixels_per_meter, height_meters - 7)
+    player_accel = 0
+    player_vel = player_vel_init
+    player_pos = pygame.Vector2(player_pos_init.x, player_pos_init.y)
+    player_time = 0
+
+    penalty = 0
+    score = 0
+    gameover = False
+
+font_gameover = pygame.font.SysFont("Calibri", 40, True)
+font_score = pygame.font.SysFont("Book Antiqua", 28)
 font_proj = pygame.font.SysFont("Book Antiqua", 17)
 
 while running:
@@ -56,7 +80,27 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    if lastProjectile >= 5:
+    keys = pygame.key.get_pressed()
+    if (keys[pygame.K_r]):
+        restart()
+
+    if gameover:
+        screen.fill("white")
+
+        gameover_text = font_gameover.render("GAME OVER", True, (255, 0, 0))
+        screen.blit(gameover_text, (((screen.get_width() / 2) - (gameover_text.get_width() / 2)), (screen.get_height() / 2) - 80))
+
+        score_text = font_score.render("SCORE: " + str(score), True, (0, 0, 0))
+        screen.blit(score_text, (((screen.get_width() / 2) - (score_text.get_width() / 2)), screen.get_height()/ 2))
+
+        score_text = font_score.render("PRESS R TO RESTART", True, "grey")
+        screen.blit(score_text, (((screen.get_width() / 2) - (score_text.get_width() / 2)), (screen.get_height() - 50)))
+
+        pygame.display.flip()
+        dt = clock.tick(120) / 1000
+        continue
+
+    if lastProjectile >= proj_delay:
         newProjectile()
         lastProjectile = 0
 
@@ -70,6 +114,15 @@ while running:
 
     #Dibujar jugador
     pygame.draw.rect(screen, "blue", pygame.Rect((player_pos.x * pixels_per_meter) - 60, (player_pos.y * pixels_per_meter), 120, 10))
+
+    #Descartar proyectil con S o ABAJO
+    if ((keys[pygame.K_s] or keys[pygame.K_DOWN])):
+        pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(10, screen.get_height() - 20, 510, 6))
+        penalty = 5
+        discarding = True
+    elif discarding == True:
+        discarding = False
+
 
     for proj in proj_list:
 
@@ -90,10 +143,13 @@ while running:
         pygame.draw.circle(screen, "red", proj.pos * pixels_per_meter, 12)
 
         #Se prepara un nuevo MRUA con velocidad opuesta en Y al colisionar contra el jugador
+        #Se suman puntos si la penalización no está activa
         if proj.pos.x + (12 / pixels_per_meter) >= player_pos.x - (60 / pixels_per_meter) and proj.pos.x - (12 / pixels_per_meter) <= player_pos.x + (60 / pixels_per_meter) and proj.pos.y + (12 / pixels_per_meter) >= player_pos.y and proj.pos.y + (12 / pixels_per_meter) <= player_pos.y + 2 and proj.vel.y > 0:
             proj.vel_init = pygame.Vector2(proj.vel.x, -abs(proj.vel.y))
             proj.pos_init = proj.pos
             proj.time = 0
+            if penalty <= 0:
+                score += proj.mass
 
         #Se prepara un nuevo MRUA con velocidad opuesta en X al colisionar contra una pared o techo
         if proj.pos.x - (12 / pixels_per_meter) <= 10 / pixels_per_meter and proj.vel.x < 0:
@@ -111,9 +167,14 @@ while running:
             proj.pos_init = proj.pos
             proj.time = 0
 
-        #TEMPORAL Eliminar proyectiles pos >= height
-        if proj.pos.y >= height_meters:
+        #Descartar proyectil con S o ABAJO
+        if discarding == True and proj.pos.y >= height_meters - 2.5:
             proj_list.remove(proj)
+            break
+
+        #TEMPORAL Game over al caer 1 proyectil
+        if proj.pos.y >= height_meters:
+            gameover = True
             break
 
          #if Colison de proyectiles
@@ -140,7 +201,7 @@ while running:
     #INICIO LOGICA JUGADOR
 
     #Jugador acelera izquierda o derecha con velocidad maxima y frenado
-    keys = pygame.key.get_pressed()
+    
     if ((keys[pygame.K_a] or keys[pygame.K_LEFT])):
         if player_vel > -63:
             if player_vel <= 0:
@@ -198,9 +259,20 @@ while running:
     #FIN LOGICA JUGADOR
 
     #Dibujar el texto del score e información del juego
-    score_text = font_score.render("1234567890", True, (0, 0, 0))
-    screen.blit(score_text, (screen.get_width() - score_text.get_width() - 15, 50))
+    if penalty > 0:
+        if not font_score.get_strikethrough():
+            font_score.set_strikethrough(True)
+        score_text = font_score.render(str(score), True, (255, 0, 0))
+    elif penalty <= 0:
+        if font_score.get_strikethrough():
+            font_score.set_strikethrough(False)
+        score_text = font_score.render(str(score), True, (0, 0, 0))
 
+    screen.blit(score_text, (screen.get_width() - score_text.get_width() - 5, 50))
+
+    font_score.set_strikethrough(False)
+    score_text = font_score.render("SCORE:", True, (0, 0, 0))
+    screen.blit(score_text, (screen.get_width() - score_text.get_width() - 80, 50))
 
     # flip() the display to put your work on screen
     pygame.display.flip()
@@ -211,5 +283,9 @@ while running:
     dt = clock.tick(120) / 1000
     player_time += dt
     lastProjectile += dt
+    penalty -= dt
+    if proj_delay >= 1:
+        proj_delay -= dt * 0.02
+    print("delay: " + str(proj_delay))
 
 pygame.quit()
