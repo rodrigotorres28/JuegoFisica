@@ -16,12 +16,12 @@ clock = pygame.time.Clock()
 running = True
 dt = 0
 
-gameover = False
+lives = 3
 score = 0
 discarding = False
 penalty = 0
+difficulty = "Trivial"
 
-gamespeed = 1
 proj_list = []
 
 class Projectile:
@@ -55,7 +55,7 @@ player_time = 0
 player_accel_last_tick = 0
 
 def restart():
-    global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, gameover
+    global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, lives
     proj_list = []
     lastProjectile = 9.8
     proj_delay = 10
@@ -69,11 +69,12 @@ def restart():
 
     penalty = 0
     score = 0
-    gameover = False
+    lives = 3
 
 font_gameover = pygame.font.SysFont("Calibri", 40, True)
 font_score = pygame.font.SysFont("Book Antiqua", 28)
 font_proj = pygame.font.SysFont("Book Antiqua", 17)
+font_game_info = pygame.font.SysFont("Arial", 22)
 colour = (255,0,0)
 
 
@@ -135,7 +136,7 @@ while running:
     if ((keys[pygame.K_r]) or midi_restarting_on):
         restart()
 
-    if gameover:
+    if lives <= 0:
         screen.fill("white")
 
         gameover_text = font_gameover.render("GAME OVER", True, (255, 0, 0))
@@ -154,6 +155,20 @@ while running:
     if lastProjectile >= proj_delay:
         newProjectile()
         lastProjectile = 0
+
+    if proj_delay <= 1:
+        difficulty = "MAX"
+    elif proj_delay <= 3:
+        difficulty = "Insane"
+    elif proj_delay <= 5:
+        difficulty = "Hard"
+    elif proj_delay <= 7:
+        difficulty = "Medium"
+    elif proj_delay <= 9:
+        difficulty = "Easy"
+    else:
+        difficulty = "Trivial"
+
 
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("white")
@@ -188,7 +203,7 @@ while running:
         #MRUA proyectiles (en ambos ejes aunque aceleración pueda ser 0 y ser solo MRU)
         proj.pos = (proj.accel/2) * (proj.time**2) + proj.vel_init * proj.time + proj.pos_init
         proj.accel_last_tick = proj.accel
-        proj.time += dt * gamespeed
+        proj.time += dt
 
         #Dibujar cada proyectil
         match proj.mass:
@@ -232,10 +247,11 @@ while running:
             proj_list.remove(proj)
             continue
 
-        #TEMPORAL Game over al caer 1 proyectil
+        #Perder una vida al caer 1 proyectil
         if proj.pos.y >= height_meters:
-            gameover = True
-            break
+            lives -= 1
+            proj_list.remove(proj)
+            continue
 
          #if Colison de proyectiles
         
@@ -350,6 +366,12 @@ while running:
     score_text = font_score.render("SCORE:", True, (0, 0, 0))
     screen.blit(score_text, (screen.get_width() - score_text.get_width() - 80, 50))
 
+    lives_text = font_game_info.render("LIVES: " + str(lives), True, (0,0,0))
+    screen.blit(lives_text, (screen.get_width() - 178, 170))
+
+    difficulty_text = font_game_info.render("DIFFICULTY: " + difficulty, True, (0,0,0))
+    screen.blit(difficulty_text, (screen.get_width() - 178, 200))
+
     # flip() the display to put your work on screen
     pygame.display.flip()
 
@@ -360,9 +382,9 @@ while running:
     player_time += dt
     lastProjectile += dt
     penalty -= dt
-    if proj_delay >= 6:
+    if proj_delay >= 5:
         proj_delay -= dt * 0.05
     elif proj_delay >= 1:
-        proj_delay -= dt * 0.01
+        proj_delay -= dt * 0.02
 
 pygame.quit()
