@@ -74,6 +74,8 @@ def restart():
 font_gameover = pygame.font.SysFont("Calibri", 40, True)
 font_score = pygame.font.SysFont("Book Antiqua", 28)
 font_proj = pygame.font.SysFont("Book Antiqua", 17)
+colour = (255,0,0)
+
 
 midi_in = rtmidi.MidiIn()
 available_ports = midi_in.get_ports()
@@ -189,7 +191,16 @@ while running:
         proj.time += dt * gamespeed
 
         #Dibujar cada proyectil
-        pygame.draw.circle(screen, "red", proj.pos * pixels_per_meter, 12)
+        match proj.mass:
+            case  1 | 2 | 3:
+                colour = (255,0,0)
+            case 4 | 5 | 6:
+                colour = (0,0,255)
+            case _: 
+                colour = (0,255,0)
+
+        pygame.draw.circle(screen, colour, proj.pos * pixels_per_meter, 12)
+
 
         #Se prepara un nuevo MRUA con velocidad opuesta en Y al colisionar contra el jugador
         #Se suman puntos si la penalización no está activa
