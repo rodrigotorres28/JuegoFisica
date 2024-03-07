@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import random
+import rtmidi
 
 # pygame setup
 pygame.init()
@@ -74,6 +75,53 @@ font_gameover = pygame.font.SysFont("Calibri", 40, True)
 font_score = pygame.font.SysFont("Book Antiqua", 28)
 font_proj = pygame.font.SysFont("Book Antiqua", 17)
 
+midi_in = rtmidi.MidiIn()
+available_ports = midi_in.get_ports()
+midi_connected = False
+if available_ports:
+    midi_in.open_port(0) 
+    midi_connected = True
+else:
+    midi_connected = False
+    print("No se encontraron dispositivos MIDI disponibles.")
+
+midi_accel = 0 
+midi_discarding_on = False
+midi_restarting_on = False
+
+def handle_midi_message(message, data): 
+    global midi_accel, midi_discarding_on, midi_restarting_on
+    print(message)
+    print("---")
+    #print(message[0][0])
+    #print(message[0][1])
+    #print(message[0][2])
+
+    if message[0][0] == 224 and message[0][1] == 0: #equivalente a A y D
+        if message[0][2] > 64:
+            accel_per_value = 121/63
+            midi_accel = (message[0][2] - 63) * accel_per_value
+        elif message[0][2] < 64: 
+            accel_per_value = 121/64
+            midi_accel = (message[0][2] - 64) * accel_per_value
+        else:
+            midi_accel = 0
+            
+    if message[0][0] == 191 and message[0][1] == 117: #equivalente a S
+        if message[0][2] == 0:
+            midi_discarding_on = False
+        else: 
+            midi_discarding_on = True
+
+    if message[0][0] == 191 and message[0][1] == 113: #equivalente a R
+        if message[0][2] == 0:
+            midi_restarting_on = False
+        else: 
+            midi_restarting_on = True
+        
+
+midi_in.set_callback(handle_midi_message)
+
 while running:
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
@@ -82,7 +130,7 @@ while running:
             running = False
 
     keys = pygame.key.get_pressed()
-    if (keys[pygame.K_r]):
+    if ((keys[pygame.K_r]) or midi_restarting_on):
         restart()
 
     if gameover:
@@ -117,7 +165,7 @@ while running:
     pygame.draw.rect(screen, "blue", pygame.Rect((player_pos.x * pixels_per_meter) - 60, (player_pos.y * pixels_per_meter), 120, 10))
 
     #Descartar proyectil con S o ABAJO
-    if ((keys[pygame.K_s] or keys[pygame.K_DOWN])):
+    if (((keys[pygame.K_s] or keys[pygame.K_DOWN])) or midi_discarding_on):
         pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(10, screen.get_height() - 20, 510, 6))
         penalty = 5
         discarding = True
@@ -171,7 +219,7 @@ while running:
         #Descartar proyectil con S o ABAJO
         if discarding == True and proj.pos.y >= height_meters - 2.5:
             proj_list.remove(proj)
-            break
+            continue
 
         #TEMPORAL Game over al caer 1 proyectil
         if proj.pos.y >= height_meters:
@@ -197,38 +245,58 @@ while running:
         proj_text_rect.center = (proj.pos.x * pixels_per_meter, (proj.pos.y) * pixels_per_meter)
         screen.blit(proj_text, proj_text_rect.topleft)
 
-    player_vel = player_accel_last_tick * player_time + player_vel_init
 
     #INICIO LOGICA JUGADOR
+    player_vel = player_accel_last_tick * player_time + player_vel_init
 
     #Jugador acelera izquierda o derecha con velocidad maxima y frenado
     
-    if ((keys[pygame.K_a] or keys[pygame.K_LEFT])):
-        if player_vel > -63:
-            if player_vel <= 0:
-                player_accel = -120
+    if not midi_connected: 
+        if ((keys[pygame.K_a] or keys[pygame.K_LEFT])):
+            if player_vel > -63:
+                if player_vel <= 0:
+                    player_accel = -120
+                else:
+                    player_accel = -202
             else:
-                player_accel = -202
-        else:
-            player_accel = 0
+                player_accel = 0
 
-    elif ((keys[pygame.K_d] or keys[pygame.K_RIGHT])):
-        if player_vel < 63:
-            if player_vel >= 0:
-                player_accel = 120
+        elif ((keys[pygame.K_d] or keys[pygame.K_RIGHT])):
+            if player_vel < 63:
+                if player_vel >= 0:
+                    player_accel = 120
+                else:
+                    player_accel = 202
             else:
-                player_accel = 202
-        else:
-            player_accel = 0
+                player_accel = 0
 
-    else:
-        if(player_vel < -1):
-            player_accel = 82
-        elif(player_vel > 1):
-            player_accel = -82
         else:
-            player_accel = 0
-            player_vel_init = 0
+            if(player_vel < -1):
+                player_accel = 82
+            elif(player_vel > 1):
+                player_accel = -82
+            else:
+                player_accel = 0
+                player_vel_init = 0
+
+    else: 
+        if midi_accel < 0 and player_vel < 0: 
+            player_accel = midi_accel
+        if midi_accel < 0 and player_vel >= 0:
+            player_accel = midi_accel - 82
+        if midi_accel > 0 and player_vel > 0:
+            player_accel = midi_accel 
+        if midi_accel > 0 and player_vel <= 0:
+            player_accel = midi_accel + 82
+        if midi_accel == 0:
+            if(player_vel < -1):
+                player_accel = 82
+            elif(player_vel > 1):
+                player_accel = -82
+            else:
+                player_accel = 0
+                player_vel_init = 0
+
             
     #Se prepara un nuevo MRUA al cambiar la aceleración
     if (player_accel != player_accel_last_tick):
@@ -248,10 +316,6 @@ while running:
         player_time = 0
     #520: distancia entre paredes, 10: ancho paredes, 120: largo jugador
         
-    print("-------------------------------------")
-    print("accel:" + str(player_accel))
-    print("vel:" + str(player_vel))
-    print("pos:" + str(player_pos))
 
     #MRUA jugador
     player_pos.x = (player_accel/2) * (player_time**2) + player_vel_init * player_time + player_pos_init.x
@@ -289,6 +353,5 @@ while running:
         proj_delay -= dt * 0.05
     elif proj_delay >= 1:
         proj_delay -= dt * 0.01
-    print("delay: " + str(proj_delay))
 
 pygame.quit()
