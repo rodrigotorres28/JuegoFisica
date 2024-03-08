@@ -238,12 +238,14 @@ while running:
 
         #Dibujar cada proyectil
         match proj.mass:
-            case  1 | 2 | 3:
-                colour = (255,0,0)
-            case 4 | 5 | 6:
-                colour = (0,0,255)
+            case  1 | 2:
+                colour = (111, 213, 227)
+            case 3 | 4 :
+                colour = (111, 155, 227)
+            case 5 | 6 : 
+                colour = (171, 111, 227)
             case _: 
-                colour = (0,255,0)
+                colour = (212, 111, 227)
 
         pygame.draw.circle(screen, colour, proj.pos * pixels_per_meter, 12)
 
