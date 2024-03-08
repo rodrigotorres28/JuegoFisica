@@ -1,3 +1,4 @@
+import math
 import pygame
 import numpy as np
 import random
@@ -19,6 +20,9 @@ dt = 0
 lives = 3
 score = 0
 discarding = False
+recovering = 0
+cooldown_recover = 30
+recovered = []
 penalty = 0
 difficulty = "Trivial"
 
@@ -43,6 +47,8 @@ def newProjectile():
     proj = Projectile()
     proj.pos_init = pygame.Vector2((530 / 2) / pixels_per_meter + random.uniform(-20, 20), height_meters / 2 + random.uniform(-20, 0))
     proj.vel_init = pygame.Vector2(random.uniform(-16, 16), random.uniform(-32, -13))
+    if(len(recovered) > 0):
+        proj.mass = recovered.pop(0)
     proj_list.append(proj)
 
 player_vel_init = 0
@@ -55,7 +61,7 @@ player_time = 0
 player_accel_last_tick = 0
 
 def restart():
-    global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, lives
+    global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, lives, cooldown_recover, recovering
     proj_list = []
     lastProjectile = 9.8
     proj_delay = 10
@@ -70,11 +76,14 @@ def restart():
     penalty = 0
     score = 0
     lives = 3
+    cooldown_recover = 30
+    recovering = 0
 
 font_gameover = pygame.font.SysFont("Calibri", 40, True)
 font_score = pygame.font.SysFont("Book Antiqua", 28)
 font_proj = pygame.font.SysFont("Book Antiqua", 17)
-font_game_info = pygame.font.SysFont("Arial", 22)
+font_game_info = pygame.font.SysFont("Arial", 19, True)
+font_recover = pygame.font.SysFont("Arial", 22)
 colour = (255,0,0)
 
 
@@ -189,6 +198,13 @@ while running:
     elif discarding == True:
         discarding = False
 
+    if ((keys[pygame.K_w] or keys[pygame.K_UP])):
+        if (cooldown_recover <= 0):
+            cooldown_recover = 30
+            recovering = 5
+    if (recovering > 0):
+        pygame.draw.rect(screen, (0, 170, 0), pygame.Rect(10, screen.get_height() - 20, 510, 6))
+
 
     for proj in proj_list:
 
@@ -244,6 +260,11 @@ while running:
 
         #Descartar proyectil con S o ABAJO
         if discarding == True and proj.pos.y >= height_meters - 2.5:
+            proj_list.remove(proj)
+            continue
+
+        if recovering >= 0 and proj.pos.y >= height_meters - 2.5:
+            recovered.append(proj.mass)
             proj_list.remove(proj)
             continue
 
@@ -372,16 +393,27 @@ while running:
     difficulty_text = font_game_info.render("DIFFICULTY: " + difficulty, True, (0,0,0))
     screen.blit(difficulty_text, (screen.get_width() - 178, 200))
 
+    recovered_text = font_game_info.render("RECOVERED BALLS: " + str(len(recovered)), True, (0,0,0))
+    screen.blit(recovered_text, (screen.get_width() - 178, 230))
+
+    if (cooldown_recover > 0):
+        recovery_text = font_recover.render("COOLDOWN: " + str(math.ceil(cooldown_recover)), True, (255, 132, 0))
+        screen.blit(recovery_text, (screen.get_width() - 162, 680))
+    else:
+        recovery_text = font_recover.render("RECOVERY READY", True, (0, 170, 0))
+        screen.blit(recovery_text, (screen.get_width() - 175, 680))
+
     # flip() the display to put your work on screen
     pygame.display.flip()
 
     # limits FPS to 120
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
+    # dt is delta time in seconds since last frame, used for framerate
     dt = clock.tick(120) / 1000
     player_time += dt
     lastProjectile += dt
     penalty -= dt
+    cooldown_recover -= dt
+    recovering -= dt
     if proj_delay >= 5:
         proj_delay -= dt * 0.05
     elif proj_delay >= 1:
