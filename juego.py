@@ -238,11 +238,11 @@ while running:
 
         #Dibujar cada proyectil
         match proj.mass:
-            case  1 | 2:
+            case  1 | 2 | 3 | 4 | 5:
                 colour = (111, 213, 227)
-            case 3 | 4 :
+            case 6 | 7 | 8 | 9 | 10:
                 colour = (111, 155, 227)
-            case 5 | 6 : 
+            case 11 | 12 | 13 | 14 | 15:
                 colour = (171, 111, 227)
             case _: 
                 colour = (212, 111, 227)
