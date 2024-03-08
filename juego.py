@@ -97,8 +97,19 @@ font_recover = pygame.font.SysFont("Arial", 22)
 colour = (255,0,0)
 
 lost_life_sound = pygame.mixer.Sound('lostlife.wav')
+lost_life_sound.set_volume(0.8)
 proj_colision_sound = pygame.mixer.Sound('projcolision.wav')
+proj_colision_sound.set_volume(0.25)
 pop_up_sound = pygame.mixer.Sound('popup.wav')
+pop_up_sound.set_volume(1.25)
+bounce1_sound = pygame.mixer.Sound('BOUNCE1.wav')
+bounce1_sound.set_volume(0.9)
+bounce2_sound = pygame.mixer.Sound('BOUNCE2.wav')
+bounce2_sound.set_volume(0.9)
+bounce3_sound = pygame.mixer.Sound('BOUNCE3.wav')
+bounce3_sound.set_volume(0.9)
+bounce4_sound = pygame.mixer.Sound('BOUNCE4.wav')
+bounce4_sound.set_volume(0.9)
 
 
 midi_in = rtmidi.MidiIn()
@@ -267,6 +278,15 @@ while running:
         #Se prepara un nuevo MRUA con velocidad opuesta en Y al colisionar contra el jugador
         #Se suman puntos si la penalización no está activa
         if proj.pos.x + (12 / pixels_per_meter) >= player_pos.x - (60 / pixels_per_meter) and proj.pos.x - (12 / pixels_per_meter) <= player_pos.x + (60 / pixels_per_meter) and proj.pos.y + (12 / pixels_per_meter) >= player_pos.y and proj.pos.y + (12 / pixels_per_meter) <= player_pos.y + 2 and proj.vel.y > 0:
+            if(proj.mass >= 16):
+                bounce4_sound.play()
+            elif(proj.mass >= 11):
+                bounce3_sound.play()
+            elif(proj.mass >= 6):
+                bounce2_sound.play()
+            else:
+                bounce1_sound.play()
+
             proj.vel_init = pygame.Vector2(proj.vel.x, -abs(proj.vel.y))
             proj.pos_init = proj.pos
             proj.time = 0
