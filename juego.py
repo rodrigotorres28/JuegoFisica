@@ -47,6 +47,7 @@ proj_delay = 10
 lastProjectile = 9.8
 
 def newProjectile():
+    pop_up_sound.play()
     global next_id
     proj = Projectile()
     proj.id = next_id
@@ -95,6 +96,10 @@ font_game_info = pygame.font.SysFont("Arial", 19, True)
 font_recover = pygame.font.SysFont("Arial", 22)
 colour = (255,0,0)
 
+lost_life_sound = pygame.mixer.Sound('lostlife.wav')
+proj_colision_sound = pygame.mixer.Sound('projcolision.wav')
+pop_up_sound = pygame.mixer.Sound('popup.wav')
+
 
 midi_in = rtmidi.MidiIn()
 available_ports = midi_in.get_ports()
@@ -109,10 +114,11 @@ else:
 midi_accel = 0 
 midi_discarding_on = False
 midi_restarting_on = False
+midi_recovering_on = False 
 
 def handle_midi_message(message, data): 
-    global midi_accel, midi_discarding_on, midi_restarting_on
-    print(message)
+    global midi_accel, midi_discarding_on, midi_restarting_on, midi_recovering_on
+    #print(message)
     print("---")
     #print(message[0][0])
     #print(message[0][1])
@@ -120,14 +126,16 @@ def handle_midi_message(message, data):
 
     if message[0][0] == 224 and message[0][1] == 0: #equivalente a A y D
         if message[0][2] > 64:
-            accel_per_value = 121/63
+            accel_per_value = 130/63
             midi_accel = (message[0][2] - 63) * accel_per_value
         elif message[0][2] < 64: 
-            accel_per_value = 121/64
+            accel_per_value = 130/64
             midi_accel = (message[0][2] - 64) * accel_per_value
         else:
             midi_accel = 0
-            
+    
+    print(midi_accel)    
+
     if message[0][0] == 191 and message[0][1] == 117: #equivalente a S
         if message[0][2] == 0:
             midi_discarding_on = False
@@ -139,6 +147,12 @@ def handle_midi_message(message, data):
             midi_restarting_on = False
         else: 
             midi_restarting_on = True
+
+    if message[0][0] == 191 and message[0][1] == 118: #equivalente a W
+        if message[0][2] == 0:
+            midi_recovering_on = False
+        else: 
+            midi_recovering_on = True
         
 
 midi_in.set_callback(handle_midi_message)
@@ -210,7 +224,7 @@ while running:
     elif discarding == True:
         discarding = False
 
-    if ((keys[pygame.K_w] or keys[pygame.K_UP])):
+    if (((keys[pygame.K_w] or keys[pygame.K_UP])) or midi_recovering_on):
         if (cooldown_recover <= 0):
             cooldown_recover = 30
             recovering = 5
@@ -287,6 +301,7 @@ while running:
 
         #Perder una vida al caer 1 proyectil
         if proj.pos.y >= height_meters:
+            lost_life_sound.play()
             lives -= 1
             proj_list.remove(proj)
             continue
@@ -295,6 +310,7 @@ while running:
         
         for proj_col in proj_list:
             if  proj_col != proj and np.sqrt((proj_col.pos.x - proj.pos.x) ** 2 + (proj_col.pos.y - proj.pos.y) ** 2) <= 24 / pixels_per_meter:
+                proj_colision_sound.play()
                 vel_f = ((proj.mass * proj.vel) + (proj_col.mass * proj_col.vel)) / (proj.mass + proj_col.mass)
                 pos_new_proj = pygame.Vector2((proj.pos.x + proj_col.pos.x) / 2, (proj.pos.y + proj_col.pos.y) / 2)
                 proj.vel_init = vel_f
