@@ -47,8 +47,8 @@ proj_delay = 10
 lastProjectile = 9.8
 
 def newProjectile():
-    pop_up_sound.play()
     global next_id
+    pop_up_sound.play()
     proj = Projectile()
     proj.id = next_id
     next_id += 1
@@ -101,7 +101,7 @@ lost_life_sound.set_volume(0.8)
 proj_colision_sound = pygame.mixer.Sound('projcolision.wav')
 proj_colision_sound.set_volume(0.25)
 pop_up_sound = pygame.mixer.Sound('popup.wav')
-pop_up_sound.set_volume(1.25)
+pop_up_sound.set_volume(1.35)
 bounce1_sound = pygame.mixer.Sound('BOUNCE1.wav')
 bounce1_sound.set_volume(0.9)
 bounce2_sound = pygame.mixer.Sound('BOUNCE2.wav')
