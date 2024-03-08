@@ -3,6 +3,7 @@ import pygame
 import numpy as np
 import random
 import rtmidi
+import csv
 
 # pygame setup
 pygame.init()
@@ -28,7 +29,9 @@ difficulty = "Trivial"
 
 proj_list = []
 
+next_id = 0
 class Projectile:
+    id = next_id
     accel_init = pygame.Vector2(0, 9.8)
     vel_init = pygame.Vector2(0, 0)
     pos_init = pygame.Vector2((530 / 2) / pixels_per_meter, height_meters / 2)
@@ -44,7 +47,10 @@ proj_delay = 10
 lastProjectile = 9.8
 
 def newProjectile():
+    global next_id
     proj = Projectile()
+    proj.id = next_id
+    next_id += 1
     proj.pos_init = pygame.Vector2((530 / 2) / pixels_per_meter + random.uniform(-20, 20), height_meters / 2 + random.uniform(-20, 0))
     proj.vel_init = pygame.Vector2(random.uniform(-16, 16), random.uniform(-32, -13))
     if(len(recovered) > 0):
@@ -59,6 +65,9 @@ player_pos = pygame.Vector2(player_pos_init.x, player_pos_init.y)
 player_time = 0
 
 player_accel_last_tick = 0
+
+log_data = [['ID', 'TIME', 'POS X', 'VEL X', 'ACCEL X', 'POS X init', 'VEL X init', 'POS Y', 'VEL Y', 'ACCEL Y', 'POS Y init', 'VEL Y init']]
+file_path = "Projectiles_log.csv"
 
 def restart():
     global proj_list, lastProjectile, proj_delay, player_vel_init, player_pos_init, player_accel, player_vel, player_pos, player_time, penalty, score, lives, cooldown_recover, recovering
@@ -139,6 +148,9 @@ while running:
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            with open(file_path, "w", newline='') as csv_file:
+                writer = csv.writer(csv_file, delimiter=';')
+                writer.writerows(log_data)
             running = False
 
     keys = pygame.key.get_pressed()
@@ -218,6 +230,9 @@ while running:
 
         #MRUA proyectiles (en ambos ejes aunque aceleración pueda ser 0 y ser solo MRU)
         proj.pos = (proj.accel/2) * (proj.time**2) + proj.vel_init * proj.time + proj.pos_init
+
+        log_data.append([proj.id, proj.time, proj.pos.x, proj.vel.x, proj.accel.x, proj.pos_init.x, proj.vel_init.x, proj.pos.y, proj.vel.y, proj.accel.y, proj.pos_init.y, proj.vel_init.y])
+
         proj.accel_last_tick = proj.accel
         proj.time += dt
 
@@ -284,6 +299,8 @@ while running:
                 proj.pos_init = pos_new_proj
                 proj.time = 0
                 proj.mass = proj.mass + proj_col.mass
+                proj.id = next_id
+                next_id += 1
                 proj_list.remove(proj_col)
                 break
         
